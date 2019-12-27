@@ -1,4 +1,5 @@
 import pygame
+from abc import ABC, abstractmethod
 
 
 class RectField(object):
@@ -21,7 +22,7 @@ class RectField(object):
         return self._width
 
 
-class Piece(object):
+class Piece(ABC):
     def __init__(self, x_tile: int, y_tile: int, color: str, symbol: str):
         self._symbol = symbol
         self._x_tile = x_tile
@@ -29,9 +30,19 @@ class Piece(object):
         self._color = color
         self.font = pygame.font.Font("freesansbold.ttf", 32)
         self._figure_pic = self.font.render(f"{self._symbol}", True, (20, 200, 200))  # fix to picture
+        self._DIRECTIONS = {
+            "N": (0, -1),
+            "NE": (1, -1),
+            "E": (1, 0),
+            "SE": (1, 1),
+            "S": (0, 1),
+            "SW": (-1, 1),
+            "W": (-1, 0),
+            "NW": (-1, -1)
+                            }
 
     def __str__(self):
-        return f"{self.color}"
+        return f"{self.color} Piece"
 
     def draw_piece(self, surface: pygame.Surface, w, board):
         margin = board.get_margin()
@@ -43,6 +54,28 @@ class Piece(object):
     @property
     def color(self):
         return self._color
+
+    @abstractmethod
+    def get_possible_moves(self):
+        pass
+
+
+class King(Piece):
+    def __init__(self, x_tile: int, y_tile: int, color: str):
+        super().__init__(x_tile, y_tile, color, symbol="K")
+
+    def get_possible_moves(self, field: list):
+        possible_moves = []
+        current_pos = self._x_tile, self._y_tile
+        for direc in self._DIRECTIONS.values():
+            option = optionx, optiony = tuple(map(sum, list(zip(direc, current_pos))))
+            try:
+                if 0 <= optionx <= len(field[0]) or 0 <= optiony <= len(field):
+                    if field[optiony][optionx] == 0 or field[optiony][optionx].color != self.color:
+                        possible_moves.append(option)
+            except IndexError:
+                pass
+        return possible_moves
 
 
 class ChessBoard(RectField):
@@ -62,6 +95,8 @@ class ChessBoard(RectField):
         self._black_tile_color = black_tile_color
         self._active_tile_color = (200, 200, 0)
         self._active_tile = None
+        self._possible_moves = []
+        self._surface = surface
         self._field = field
 
     def get_margin(self):
@@ -69,6 +104,10 @@ class ChessBoard(RectField):
 
     def set_active_tile(self, active_tile: tuple or None):
         self._active_tile = active_tile
+
+    def set_possible_moves(self, possible_moves: list):
+        self._possible_moves = possible_moves
+
 
     def draw_board(self):
         for i, row in enumerate(self._field):
@@ -90,6 +129,28 @@ class ChessBoard(RectField):
                                  self._cell_size
                              ]
                              )
+        if self._possible_moves:
+            for i in self._possible_moves:
+                pygame.draw.rect(self._surface, self._active_tile_color,
+                                 [
+                                     self._x + (self._cell_size * i[0]),
+                                     self._y + (self._cell_size * i[1]),
+                                     self._cell_size,
+                                     self._cell_size
+                                 ]
+                                 )
+
+        for hor in range(len(self._field)+1):
+            pygame.draw.line(self._surface, (255, 0, 0),
+                             (0+self._x, hor*self._cell_size + self._y),
+                             (len(self._field[0])*self._cell_size+self._x, hor * self._cell_size + self._y), 1)
+
+        for ver in range(len(self._field)+1):
+            pygame.draw.line(self._surface, (255, 0, 0),
+                             (ver*self._cell_size + self._x, 0+self._y),
+                             (ver * self._cell_size + self._x, len(self._field)*self._cell_size+self._y), 1)
+
+
 
     def get_field(self):
         return self._field
