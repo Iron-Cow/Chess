@@ -1,5 +1,6 @@
 import pygame
 from abc import ABC, abstractmethod
+from PIL import Image
 
 
 class RectField(object):
@@ -25,11 +26,12 @@ class RectField(object):
 class Piece(ABC):
     def __init__(self, x_tile: int, y_tile: int, color: str, symbol: str):
         self._symbol = symbol
+        self._moves_count = 0
         self._x_tile = x_tile
         self._y_tile = y_tile
         self._color = color
         self.font = pygame.font.Font("freesansbold.ttf", 32)
-        self._figure_pic = self.font.render(f"{self._symbol}", True, (20, 200, 200))  # fix to picture
+        self._figure_pic = pygame.image.load(f"{self.color}{self._symbol}.png")
         self._DIRECTIONS = {
             "N": (0, -1),
             "NE": (1, -1),
@@ -40,27 +42,49 @@ class Piece(ABC):
             "W": (-1, 0),
             "NW": (-1, -1)
                             }
+        self.directions_change()
+
+    def directions_change(self):
+
+        if self.color == "b":
+            new_directions = self._DIRECTIONS
+            for k in self._DIRECTIONS:
+                if k[0] == "N" or k[0] == "S":
+
+                    val = self._DIRECTIONS[k]
+                    new_val = (val[0], -1 * val[1])
+                    new_directions[k] = new_val
+
+    def set_new_tile(self, new_tile: tuple):
+        self._x_tile, self._y_tile = new_tile
 
     def __str__(self):
         return f"{self.color} Piece"
 
     def draw_piece(self, surface: pygame.Surface, w, board):
         margin = board.get_margin()
-        surface.blit(self._figure_pic, ((self._x_tile + 0.25) * w + margin[0], (self._y_tile + 0.25) * w + margin[1]))
+        surface.blit(self._figure_pic, (self._x_tile * w + margin[0], self._y_tile * w + margin[1]))
 
     def get_piece_data(self):
         return self._x_tile, self._y_tile, self._color, self._symbol
+
+    @property
+    def moves_count(self):
+        return self._moves_count
+
+    def upgrade_moves_count(self):
+        self._moves_count += 1
 
     @property
     def color(self):
         return self._color
 
     @abstractmethod
-    def get_possible_moves(self):
+    def get_possible_moves(self, field):
         pass
 
 
-class King(Piece):
+class King(Piece): # ############# add castle
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="K")
 
@@ -70,7 +94,174 @@ class King(Piece):
         for direc in self._DIRECTIONS.values():
             option = optionx, optiony = tuple(map(sum, list(zip(direc, current_pos))))
             try:
-                if 0 <= optionx <= len(field[0]) or 0 <= optiony <= len(field):
+                if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                    if field[optiony][optionx] == 0 or field[optiony][optionx].color != self.color:
+                        possible_moves.append(option)
+            except IndexError:
+                pass
+        return possible_moves
+
+
+class Pawn(Piece):  # ############# add weird capture and transformation
+    def __init__(self, x_tile: int, y_tile: int, color: str):
+        super().__init__(x_tile, y_tile, color, symbol="P")
+
+    def get_possible_moves(self, field: list):
+        possible_moves = []
+        current_pos = self._x_tile, self._y_tile
+
+        try:
+            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["N"], current_pos))))
+            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                if field[optiony][optionx] == 0:
+                    possible_moves.append(option)
+
+                    # first pawn move on 2 spaces
+                    option_dbl = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["N"], option))))
+                    if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                        if field[optiony][optionx] == 0 and field[self._y_tile][self._x_tile].moves_count == 0:
+                            possible_moves.append(option_dbl)
+
+
+            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["NW"], current_pos))))
+            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                if field[optiony][optionx] != 0 and field[optiony][optionx].color != self.color:
+                    possible_moves.append(option)
+
+            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["NE"], current_pos))))
+            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                if field[optiony][optionx] != 0 and field[optiony][optionx].color != self.color:
+                    possible_moves.append(option)
+
+        except IndexError:
+            pass
+        return possible_moves
+
+class Rook(Piece):
+    def __init__(self, x_tile: int, y_tile: int, color: str):
+        super().__init__(x_tile, y_tile, color, symbol="R")
+
+    def get_possible_moves(self, field: list):
+        possible_moves = []
+
+        for direc in self._DIRECTIONS:
+            if len(direc) == 1:
+                current_pos = None
+                while True:
+                    if not current_pos:
+                        current_pos = self._x_tile, self._y_tile
+
+                    option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS[direc], current_pos))))
+
+                    try:
+                        if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                            if field[optiony][optionx] == 0:
+                                possible_moves.append(option)
+                                current_pos = option
+                                continue
+                            elif field[optiony][optionx].color != self.color:
+                                possible_moves.append(option)
+                                break
+                            else:
+                                break
+                        else:
+                            break
+                    except IndexError:
+                        break
+
+        return possible_moves
+
+
+class Bishop(Piece):
+    def __init__(self, x_tile: int, y_tile: int, color: str):
+        super().__init__(x_tile, y_tile, color, symbol="B")
+
+    def get_possible_moves(self, field: list):
+        possible_moves = []
+
+        for direc in self._DIRECTIONS:
+            if len(direc) == 2:
+                current_pos = None
+                while True:
+                    if not current_pos:
+                        current_pos = self._x_tile, self._y_tile
+
+                    option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS[direc], current_pos))))
+
+                    try:
+                        if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                            if field[optiony][optionx] == 0:
+                                possible_moves.append(option)
+                                current_pos = option
+                                continue
+                            elif field[optiony][optionx].color != self.color:
+                                possible_moves.append(option)
+                                break
+                            else:
+                                break
+                        else:
+                            break
+                    except IndexError:
+                        break
+
+        return possible_moves
+
+
+class Queen(Piece):
+    def __init__(self, x_tile: int, y_tile: int, color: str):
+        super().__init__(x_tile, y_tile, color, symbol="Q")
+
+    def get_possible_moves(self, field: list):
+        possible_moves = []
+
+        for direc in self._DIRECTIONS:
+            current_pos = None
+            while True:
+                if not current_pos:
+                    current_pos = self._x_tile, self._y_tile
+
+                option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS[direc], current_pos))))
+
+                try:
+                    if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                        if field[optiony][optionx] == 0:
+                            possible_moves.append(option)
+                            current_pos = option
+                            continue
+                        elif field[optiony][optionx].color != self.color:
+                            possible_moves.append(option)
+                            break
+                        else:
+                            break
+                    else:
+                        break
+                except IndexError:
+                    break
+
+        return possible_moves
+
+
+class Knight(Piece):
+    def __init__(self, x_tile: int, y_tile: int, color: str):
+        super().__init__(x_tile, y_tile, color, symbol="N")
+        self._DIRECTIONS = [
+            (-1, -2),
+            (1, -2),
+            (2, -1),
+            (2, 1),
+            (-1, 2),
+            (1, 2),
+            (-2, -1),
+            (-2, 1),
+                            ] # only for knight
+
+    def get_possible_moves(self, field: list):
+        possible_moves = []
+        current_pos = self._x_tile, self._y_tile
+        for direc in self._DIRECTIONS:
+            option = optionx, optiony = tuple(map(sum, list(zip(direc, current_pos))))
+            try:
+                if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
                     if field[optiony][optionx] == 0 or field[optiony][optionx].color != self.color:
                         possible_moves.append(option)
             except IndexError:
@@ -82,7 +273,7 @@ class ChessBoard(RectField):
 
     def __init__(self, x: float, y: float, cell_size: int, surface: pygame.Surface,
                  field: list,
-                 black_tile_color: tuple = (20, 20, 20),
+                 black_tile_color: tuple = (120, 20, 20),
                  white_tile_color: tuple = (200, 200, 200)):
 
         super().__init__(x, y,
@@ -108,8 +299,8 @@ class ChessBoard(RectField):
     def set_possible_moves(self, possible_moves: list):
         self._possible_moves = possible_moves
 
-
     def draw_board(self):
+        # black \ white tiles
         for i, row in enumerate(self._field):
             for j, el in enumerate(row):
                 if (i + j) % 2 == 0:
@@ -120,6 +311,7 @@ class ChessBoard(RectField):
                     pygame.draw.rect(self._surface, self._black_tile_color,
                                      [self._x + (self._cell_size * j), self._y + (self._cell_size * i),
                                       self._cell_size, self._cell_size])
+
         if self._active_tile:
             pygame.draw.rect(self._surface, self._active_tile_color,
                              [
@@ -129,6 +321,7 @@ class ChessBoard(RectField):
                                  self._cell_size
                              ]
                              )
+
         if self._possible_moves:
             for i in self._possible_moves:
                 pygame.draw.rect(self._surface, self._active_tile_color,
@@ -140,17 +333,27 @@ class ChessBoard(RectField):
                                  ]
                                  )
 
+        # grid
         for hor in range(len(self._field)+1):
-            pygame.draw.line(self._surface, (255, 0, 0),
+            pygame.draw.line(self._surface, (0, 0, 0),
                              (0+self._x, hor*self._cell_size + self._y),
                              (len(self._field[0])*self._cell_size+self._x, hor * self._cell_size + self._y), 1)
 
         for ver in range(len(self._field)+1):
-            pygame.draw.line(self._surface, (255, 0, 0),
+            pygame.draw.line(self._surface, (0, 0, 0),
                              (ver*self._cell_size + self._x, 0+self._y),
                              (ver * self._cell_size + self._x, len(self._field)*self._cell_size+self._y), 1)
 
+    def make_move(self, destination_tile: tuple) -> None:
+        if destination_tile in self._possible_moves:
+            x, y = self._active_tile
+            destx, desty = destination_tile
 
+            self._field[y][x].upgrade_moves_count()
+            self._field[desty][destx] = self._field[y][x]
+            self._field[y][x] = 0
+
+            self._field[desty][destx].set_new_tile((destx, desty))
 
     def get_field(self):
         return self._field

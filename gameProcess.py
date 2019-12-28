@@ -10,9 +10,9 @@ class GameProcess(object):
         self.__window = pygame.display.set_mode(size=(900, 600))
         self.__active_tile = None
         self._possible_moves = []
-        self.__turn = "b"
-        self.__chess_board = ChessBoard(x=10,
-                                        y=10,
+        self.__turn = "w"
+        self.__chess_board = ChessBoard(x=50,
+                                        y=50,
                                         cell_size=self.__cell_size,
                                         surface=self.__window,
                                         field=self.__field)
@@ -28,12 +28,47 @@ class GameProcess(object):
     def start(self):
         self.__window.fill((50, 90, 50))
         pygame.init()
-        b_king = King(2, 2, "b")
-        b_king1 = King(2, 3, "b")
-        b_king2 = King(6, 7, "b")
-        self.__chess_board.add_piece(b_king)
-        self.__chess_board.add_piece(b_king1)
-        self.__chess_board.add_piece(b_king2)
+        # b_king = King(2, 2, "b")
+        # w_king = King(5, 7, "w")
+        # b_pawn1 = Pawn(4, 4, "b")
+        # b_pawn2 = Pawn(5, 4, "b")
+        # b_pawn3 = Pawn(5, 5, "b")
+        # w_pawn1 = Pawn(6, 6, "w")
+        # w_rook1 = Rook(4, 2, "w")
+        # w_bishop1 = Bishop(5, 2, "w")
+        # w_queen1 = Queen(1, 1, "w")
+        # w_knight1 = Knight(2, 5, "w")
+        self.__chess_board.add_piece(Rook(7, 0, "b"))
+        self.__chess_board.add_piece(Knight(6, 0, "b"))
+        self.__chess_board.add_piece(Bishop(5, 0, "b"))
+        self.__chess_board.add_piece(King(4, 0, "b"))
+        self.__chess_board.add_piece(Queen(3, 0, "b"))
+        self.__chess_board.add_piece(Bishop(2, 0, "b"))
+        self.__chess_board.add_piece(Knight(1, 0, "b"))
+        self.__chess_board.add_piece(Rook(0, 0, "b"))
+        [self.__chess_board.add_piece(Pawn(i, 1, "b")) for i in range(8)]
+
+        self.__chess_board.add_piece(Rook(7, 7, "w"))
+        self.__chess_board.add_piece(Knight(6, 7, "w"))
+        self.__chess_board.add_piece(Bishop(5, 7, "w"))
+        self.__chess_board.add_piece(King(4, 7, "w"))
+        self.__chess_board.add_piece(Queen(3, 7, "w"))
+        self.__chess_board.add_piece(Bishop(2, 7, "w"))
+        self.__chess_board.add_piece(Knight(1, 7, "w"))
+        self.__chess_board.add_piece(Rook(0, 7, "w"))
+        [self.__chess_board.add_piece(Pawn(i, 6, "w")) for i in range(8)]
+
+
+
+        # self.__chess_board.add_piece(w_king)
+        # self.__chess_board.add_piece(b_pawn1)
+        # self.__chess_board.add_piece(b_pawn2)
+        # self.__chess_board.add_piece(b_pawn3)
+        # self.__chess_board.add_piece(w_pawn1)
+        # self.__chess_board.add_piece(w_rook1)
+        # self.__chess_board.add_piece(w_bishop1)
+        # self.__chess_board.add_piece(w_queen1)
+        # self.__chess_board.add_piece(w_knight1)
         while self.__run:
             self.__chess_board.draw_board()
             self.__chess_board.draw_all_pieces()
@@ -64,6 +99,16 @@ class GameProcess(object):
                             if (x, y) == self.__active_tile:
                                 self.set_active_tile(None)
                                 self.set_possible_moves([])
+                            elif (x, y) in self._possible_moves:
+                                self.__chess_board.make_move((x, y))
+
+                                if self.__turn == "b":
+                                    self.__turn = "w"
+                                else:
+                                    self.__turn = "b"
+                                self.set_active_tile(None)
+                                self.set_possible_moves([])
+                                self.__field = self.__chess_board.get_field()
                                 # print(self.__field[y][x], x, y, "DEACTIVADED")
                     else:
                         # print(f"out_of_board! {x, y}")
