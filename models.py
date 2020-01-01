@@ -30,7 +30,6 @@ class Piece(ABC):
         self._x_tile = x_tile
         self._y_tile = y_tile
         self._color = color
-        self.font = pygame.font.Font("freesansbold.ttf", 32)
         self._figure_pic = pygame.image.load(f"{self.color}{self._symbol}.png")
         self._DIRECTIONS = {
             "N": (0, -1),
@@ -59,7 +58,7 @@ class Piece(ABC):
         self._x_tile, self._y_tile = new_tile
 
     def __str__(self):
-        return f"{self.color} Piece"
+        return f"{self.color}{self.symbol}"
 
     def draw_piece(self, surface: pygame.Surface, w, board):
         margin = board.get_margin()
@@ -79,6 +78,14 @@ class Piece(ABC):
     def color(self):
         return self._color
 
+    @property
+    def symbol(self):
+        return self._symbol
+
+    @property
+    def tiles(self):
+        return self._x_tile, self._y_tile
+
     @abstractmethod
     def get_possible_moves(self, field):
         pass
@@ -87,6 +94,7 @@ class Piece(ABC):
 class King(Piece): # ############# add castle
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="K")
+
 
     def get_possible_moves(self, field: list):
         possible_moves = []
@@ -136,6 +144,7 @@ class Pawn(Piece):  # ############# add weird capture and transformation
         except IndexError:
             pass
         return possible_moves
+
 
 class Rook(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
@@ -344,6 +353,21 @@ class ChessBoard(RectField):
                              (ver*self._cell_size + self._x, 0+self._y),
                              (ver * self._cell_size + self._x, len(self._field)*self._cell_size+self._y), 1)
 
+    def make_field_prediction(self, destination_tile: tuple) -> list:
+        x, y = self._active_tile
+        temporary_field = [[0 for __ in range(len(self._field[0]))] for _ in range(len(self._field))] # copy of the field for returning to consideration
+        destx, desty = destination_tile
+
+        for i, row in enumerate(self._field):
+            for j, el in enumerate(row):
+                if self._field[i][j] != 0:
+                    temporary_field[i][j] = self._field[i][j]
+
+        temporary_field[desty][destx] = temporary_field[y][x]
+        temporary_field[y][x] = 0
+
+        return temporary_field
+
     def make_move(self, destination_tile: tuple) -> None:
         if destination_tile in self._possible_moves:
             x, y = self._active_tile
@@ -358,6 +382,9 @@ class ChessBoard(RectField):
     def get_field(self):
         return self._field
 
+    def set_field(self, field):
+        self._field = field
+
     def get_board_coords(self) -> tuple:
         return self._x, self._y
 
@@ -369,7 +396,7 @@ class ChessBoard(RectField):
     def add_piece(self, piece: Piece):
         x, y, c, s = piece.get_piece_data()
         self._field[y][x] = piece
-        print(self._field)
+        # print(self._field)
 
     def draw_all_pieces(self):
         for i in self._field:
@@ -377,56 +404,3 @@ class ChessBoard(RectField):
                 if j != 0:
                     j.draw_piece(self._surface, self._cell_size, self)
 
-# class GameWindow(RectField):
-#     """Chess window for the game"""
-#     def __init__(self, color, grid_color: tuple, game_cell: Cell, field: list):
-#         """
-#         :param color:
-#         :param grid_color:
-#         :param game_cell:
-#         :param field: [8x8] list of lists
-#         """
-#         super().__init__(x=0, y=0,
-#                          width=len(field[0])*game_cell.get_w(),
-#                          height=len(field)*game_cell.get_w(),
-#                          color=color)
-#         self.__grid_color = grid_color
-#         self.__game_cell = game_cell
-#         self.__field = field
-#
-#     def draw_grid(self, surface):
-#         # surface.fill(self._color)
-#         for x, _ in enumerate(self.__field[0]):  # Vertical lines
-#             pygame.draw.line(surface,
-#                              self.__grid_color,
-#                              (x * self.__game_cell.get_w(), 0),
-#                              (x * self.__game_cell.get_w(), self._height),
-#                              width=1
-#                              )
-#
-#         for y, _ in enumerate(self.__field):  # Horizontal lines
-#             pygame.draw.line(surface,
-#                              self.__grid_color,
-#                              (0, y * self.__game_cell.get_w()),
-#                              (self._width, y * self.__game_cell.get_w()),
-#                              width=1
-#                              )
-#
-#         pygame.draw.line(surface,
-#                          self.__grid_color,
-#                          (self._width, 0),
-#                          (self._width, self._height),
-#                          width=1
-#                              )
-#
-#         pygame.draw.line(surface,
-#                          self.__grid_color,
-#                          (0, self._height),
-#                          (self._width, self._height,),
-#                          width=1
-#                          )
-#
-#     def draw_cells(self, surface):
-#         for row in self.__field:
-#             for cell in row:
-#                 cell.draw(surface)

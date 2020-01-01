@@ -25,19 +25,31 @@ class GameProcess(object):
         self._possible_moves = possible_moves
         self.__chess_board.set_possible_moves(possible_moves)
 
+    def is_check(self, field: list):
+        """True if given field checks the current player's King"""
+
+        def find_my_king(field: list) -> tuple:
+            """:returns tuple of coordinates of the King on corresponding turn"""
+            for i, row in enumerate(field):
+                for j, el in enumerate(row):
+                    if el != 0 and el.color == self.__turn and el.symbol == "K":
+                        return field[i][j].tiles
+
+        def all_enemy_hits(field_option: list) -> list:
+            """:returns the list of all tiles that enemy can hit or reach on given board"""
+            enemy_hits = []
+            for i, row in enumerate(field_option):
+                for j, el in enumerate(row):
+                    if el != 0 and el.color != self.__turn:
+                        enemy_hits += el.get_possible_moves(field_option)
+            return sorted(list(set(enemy_hits)))  # sort for debug only
+
+        return find_my_king(field) in all_enemy_hits(field)
+
     def start(self):
         self.__window.fill((50, 90, 50))
         pygame.init()
-        # b_king = King(2, 2, "b")
-        # w_king = King(5, 7, "w")
-        # b_pawn1 = Pawn(4, 4, "b")
-        # b_pawn2 = Pawn(5, 4, "b")
-        # b_pawn3 = Pawn(5, 5, "b")
-        # w_pawn1 = Pawn(6, 6, "w")
-        # w_rook1 = Rook(4, 2, "w")
-        # w_bishop1 = Bishop(5, 2, "w")
-        # w_queen1 = Queen(1, 1, "w")
-        # w_knight1 = Knight(2, 5, "w")
+
         self.__chess_board.add_piece(Rook(7, 0, "b"))
         self.__chess_board.add_piece(Knight(6, 0, "b"))
         self.__chess_board.add_piece(Bishop(5, 0, "b"))
@@ -58,17 +70,6 @@ class GameProcess(object):
         self.__chess_board.add_piece(Rook(0, 7, "w"))
         [self.__chess_board.add_piece(Pawn(i, 6, "w")) for i in range(8)]
 
-
-
-        # self.__chess_board.add_piece(w_king)
-        # self.__chess_board.add_piece(b_pawn1)
-        # self.__chess_board.add_piece(b_pawn2)
-        # self.__chess_board.add_piece(b_pawn3)
-        # self.__chess_board.add_piece(w_pawn1)
-        # self.__chess_board.add_piece(w_rook1)
-        # self.__chess_board.add_piece(w_bishop1)
-        # self.__chess_board.add_piece(w_queen1)
-        # self.__chess_board.add_piece(w_knight1)
         while self.__run:
             self.__chess_board.draw_board()
             self.__chess_board.draw_all_pieces()
@@ -78,28 +79,35 @@ class GameProcess(object):
 
             for event in pygame.event.get():  # key mapping of the game
                 # print(event)
-                # print(event)
                 if event.type == pygame.QUIT:
                     self.__run = False
 
                 if event.type == pygame.MOUSEBUTTONUP:
                     x, y = self.__chess_board.get_tiles(event)  # index of clicked cell
+
                     if 0 <= x <= 7 and 0 <= y <= 7:
                         # print(x, y)
                         if not self.__active_tile:
                             if self.__field[y][x] != 0 and self.__field[y][x].color == self.__turn:
                                 possible_moves = self.__field[y][x].get_possible_moves(self.__field)
-                                # print(self.__field[y][x], x, y, "ACTIVADED")
                                 self.set_active_tile((x, y))
-                                self.set_possible_moves(possible_moves)
+
+                                # Check if my move will not cause the check
+                                possible_moves_without_check = []
+                                for move in possible_moves:
+                                    field_to_check = self.__chess_board.make_field_prediction(move)
+                                    if not self.is_check(field_to_check):
+                                        possible_moves_without_check.append(move)
+                                self.set_possible_moves(possible_moves_without_check)
 
                             else:
                                 pass
+
                         else:  # if active tile is activated
-                            if (x, y) == self.__active_tile:
+                            if (x, y) == self.__active_tile:  # remove activation
                                 self.set_active_tile(None)
                                 self.set_possible_moves([])
-                            elif (x, y) in self._possible_moves:
+                            elif (x, y) in self._possible_moves:  # make a move
                                 self.__chess_board.make_move((x, y))
 
                                 if self.__turn == "b":
