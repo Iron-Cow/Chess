@@ -353,6 +353,22 @@ class ChessBoard(RectField):
                              (ver*self._cell_size + self._x, 0+self._y),
                              (ver * self._cell_size + self._x, len(self._field)*self._cell_size+self._y), 1)
 
+    def draw_transformation_options(self, color: str, surface: pygame.Surface) -> None:
+        pieces = ["Q", "N", "B", "R"]
+        for j in range(len(pieces)):
+            pygame.draw.rect(self._surface, (255, 0, 0),
+                             [self._x + (self._cell_size * 8),
+                              self._y + (self._cell_size * (((len(self._field) - 4)/2)+j)),
+                              self._cell_size, self._cell_size])
+            pygame.draw.rect(self._surface, (0, 0, 0),
+                             [self._x + (self._cell_size * 8),
+                              self._y + (self._cell_size * (((len(self._field) - 4) / 2) + j)),
+                              self._cell_size, self._cell_size], 1)
+
+            img = pygame.image.load(f"{color}{pieces[j]}.png")
+            surface.blit(img, (self._x + (self._cell_size * 8),  self._y + (self._cell_size * (((len(self._field) - 4)/2)+j))))
+
+
     def make_field_prediction(self, destination_tile: tuple) -> list:
         x, y = self._active_tile
         temporary_field = [[0 for __ in range(len(self._field[0]))] for _ in range(len(self._field))] # copy of the field for returning to consideration
