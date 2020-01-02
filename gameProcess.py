@@ -25,7 +25,7 @@ class GameProcess(object):
         self._possible_moves = possible_moves
         self.__chess_board.set_possible_moves(possible_moves)
 
-    def is_check(self, field: list):
+    def is_check(self, field: list):  # fix for king
         """True if given field checks the current player's King"""
 
         def find_my_king(field: list) -> tuple:
@@ -33,7 +33,7 @@ class GameProcess(object):
             for i, row in enumerate(field):
                 for j, el in enumerate(row):
                     if el != 0 and el.color == self.__turn and el.symbol == "K":
-                        return field[i][j].tiles
+                        return j, i
 
         def all_enemy_hits(field_option: list) -> list:
             """:returns the list of all tiles that enemy can hit or reach on given board"""
@@ -82,6 +82,9 @@ class GameProcess(object):
                             # Check if my move will not cause the check
                             possible_moves_without_check = []
                             for move in possible_moves:
+                                x, y = self.__active_tile
+                                if self.__field[y][x].symbol == "K":
+                                    print(f"*******{move}********")
                                 field_to_check = self.__chess_board.make_field_prediction(move)
                                 if not self.is_check(field_to_check):
                                     possible_moves_without_check.append(move)
@@ -97,7 +100,7 @@ class GameProcess(object):
                         elif (x, y) in self._possible_moves:  # make a move
 
                             # PAWN TRANSFORMATION BLOCK
-                            if (y == 0 or y == len(self.__field)) and \
+                            if (y == 0 or y == len(self.__field)-1) and \
                                     self.__field[self.__active_tile[1]][self.__active_tile[0]].symbol == "P":
                                 print("TRANSFORMATION!!!!", x, y)
                                 self.__turn = f"{self.__turn}T"
@@ -148,6 +151,7 @@ class GameProcess(object):
         self.chess_board_fill()
         while self.__run:
             self.__window.fill((50, 90, 50))
+
             self.__chess_board.draw_board()
             if len(self.__turn) > 1:
                 self.__chess_board.draw_transformation_options(self.__turn[0], self.__window)

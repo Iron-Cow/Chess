@@ -368,7 +368,6 @@ class ChessBoard(RectField):
             img = pygame.image.load(f"{color}{pieces[j]}.png")
             surface.blit(img, (self._x + (self._cell_size * 8),  self._y + (self._cell_size * (((len(self._field) - 4)/2)+j))))
 
-
     def make_field_prediction(self, destination_tile: tuple) -> list:
         x, y = self._active_tile
         temporary_field = [[0 for __ in range(len(self._field[0]))] for _ in range(len(self._field))] # copy of the field for returning to consideration
