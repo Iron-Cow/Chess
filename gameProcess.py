@@ -30,26 +30,25 @@ class GameProcess(object):
         self.__last_move = last_move
         self.__chess_board.set_last_move(last_move)
 
+    def find_my_king(self, field: list) -> tuple:
+        """:returns tuple of coordinates of the King on corresponding turn"""
+        for i, row in enumerate(field):
+            for j, el in enumerate(row):
+                if el != 0 and el.color == self.__turn and el.symbol == "K":
+                    return j, i
+
+    def all_enemy_hits(self, field_option: list) -> list:
+        """:returns the list of all tiles that enemy can hit or reach on given board"""
+        enemy_hits = []
+        for i, row in enumerate(field_option):
+            for j, el in enumerate(row):
+                if el != 0 and el.color != self.__turn:
+                    enemy_hits += el.get_possible_moves(field_option)
+        return sorted(list(set(enemy_hits)))  # sort for debug only
+
     def is_check(self, field: list):  # fix for king
         """True if given field checks the current player's King"""
-
-        def find_my_king(field: list) -> tuple:
-            """:returns tuple of coordinates of the King on corresponding turn"""
-            for i, row in enumerate(field):
-                for j, el in enumerate(row):
-                    if el != 0 and el.color == self.__turn and el.symbol == "K":
-                        return j, i
-
-        def all_enemy_hits(field_option: list) -> list:
-            """:returns the list of all tiles that enemy can hit or reach on given board"""
-            enemy_hits = []
-            for i, row in enumerate(field_option):
-                for j, el in enumerate(row):
-                    if el != 0 and el.color != self.__turn:
-                        enemy_hits += el.get_possible_moves(field_option)
-            return sorted(list(set(enemy_hits)))  # sort for debug only
-
-        return find_my_king(field) in all_enemy_hits(field)
+        return self.find_my_king(field) in self.all_enemy_hits(field)
 
     def event_checker(self):
         for event in pygame.event.get():  # key mapping of the game
@@ -81,17 +80,34 @@ class GameProcess(object):
                     # print(x, y)
                     if not self.__active_tile:
                         if self.__field[y][x] != 0 and self.__field[y][x].color == self.__turn:
-                            possible_moves = self.__field[y][x].get_possible_moves(self.__field)
+                            possible_moves = self.__field[y][x].get_possible_moves(self.__field, self.__last_move)
                             self.set_active_tile((x, y))
 
                             # Check if my move will not cause the check
                             possible_moves_without_check = []
                             for move in possible_moves:
                                 x, y = self.__active_tile
-                                if self.__field[y][x].symbol == "K":
-                                    print(f"*******{move}********")
+
                                 field_to_check = self.__chess_board.make_field_prediction(move)
                                 if not self.is_check(field_to_check):
+
+                                    # castle rules
+                                    if self.__field[y][x].symbol == "K" and abs(move[0] - x) > 1:
+                                        enemy_hits = self.all_enemy_hits(self.__field)
+                                        safe = True
+                                        if move[0] - x < 0:  # 0-0-0
+                                            for i in range(2):
+                                                if (x-i, y) in enemy_hits:
+                                                    safe = False
+                                                    break
+                                        elif move[0] - x > 0:  # 0-0-0
+                                            for i in range(2):
+                                                if (x+i, y) in enemy_hits:
+                                                    safe = False
+                                                    break
+                                        if not safe:
+                                            continue
+
                                     possible_moves_without_check.append(move)
                             self.set_possible_moves(possible_moves_without_check)
 
@@ -107,9 +123,9 @@ class GameProcess(object):
                             # PAWN TRANSFORMATION BLOCK
                             if (y == 0 or y == len(self.__field)-1) and \
                                     self.__field[self.__active_tile[1]][self.__active_tile[0]].symbol == "P":
-                                print("TRANSFORMATION!!!!", x, y)
+                                # print("TRANSFORMATION!!!!", x, y)
                                 self.__turn = f"{self.__turn}T"
-                                print(self.__turn)
+                                # print(self.__turn)
                                 self.__chess_board.make_move((x, y))
                                 self.set_last_move((x, y))
                                 self.__field = self.__chess_board.get_field()

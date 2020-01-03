@@ -30,7 +30,7 @@ class Piece(ABC):
         self._x_tile = x_tile
         self._y_tile = y_tile
         self._color = color
-        self._figure_pic = pygame.image.load(f"{self.color}{self._symbol}.png")
+        self._figure_pic = pygame.image.load(f"img/{self.color}{self._symbol}.png")
         self._DIRECTIONS = {
             "N": (0, -1),
             "NE": (1, -1),
@@ -40,7 +40,7 @@ class Piece(ABC):
             "SW": (-1, 1),
             "W": (-1, 0),
             "NW": (-1, -1)
-                            }
+        }
         self.directions_change()
 
     def directions_change(self):
@@ -49,7 +49,6 @@ class Piece(ABC):
             new_directions = self._DIRECTIONS
             for k in self._DIRECTIONS:
                 if k[0] == "N" or k[0] == "S":
-
                     val = self._DIRECTIONS[k]
                     new_val = (val[0], -1 * val[1])
                     new_directions[k] = new_val
@@ -91,12 +90,11 @@ class Piece(ABC):
         pass
 
 
-class King(Piece): # ############# add castle
+class King(Piece):  # ############# add castle
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="K")
 
-
-    def get_possible_moves(self, field: list):
+    def get_possible_moves(self, field: list, last_move: tuple=None):
         possible_moves = []
         current_pos = self._x_tile, self._y_tile
         for direc in self._DIRECTIONS.values():
@@ -107,6 +105,37 @@ class King(Piece): # ############# add castle
                         possible_moves.append(option)
             except IndexError:
                 pass
+
+        # castle
+        if self.moves_count == 0:
+            # 0-0-0 castle
+            if field[self._y_tile][0] != 0 and field[self._y_tile][0].moves_count == 0:
+                empty = True
+                for i in range(1, self._x_tile):
+                    if field[self._y_tile][i] != 0:
+                        empty = False
+                        break
+                if empty:
+                    option = tuple(map(sum, list(zip(self._DIRECTIONS["W"], current_pos))))
+
+                    next_option = tuple(map(sum, list(zip(self._DIRECTIONS["W"], option))))
+                    # print(current_pos, self._DIRECTIONS["W"], option, next_option)
+
+                    possible_moves.append(next_option)
+
+            # 0-0 castle
+            if field[self._y_tile][7] != 0 and field[self._y_tile][7].moves_count == 0:
+                empty = True
+                for i in range(self._x_tile+1, 7):
+                    if field[self._y_tile][i] != 0:
+                        empty = False
+                        break
+                if empty:
+                    option = tuple(map(sum, list(zip(self._DIRECTIONS["E"], current_pos))))
+
+                    next_option = tuple(map(sum, list(zip(self._DIRECTIONS["E"], option))))
+                    possible_moves.append(next_option)
+
         return possible_moves
 
 
@@ -114,7 +143,7 @@ class Pawn(Piece):  # ############# add weird capture and transformation
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="P")
 
-    def get_possible_moves(self, field: list):
+    def get_possible_moves(self, field: list, last_move: tuple=None):
         possible_moves = []
         current_pos = self._x_tile, self._y_tile
 
@@ -129,20 +158,45 @@ class Pawn(Piece):  # ############# add weird capture and transformation
                     if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
                         if field[optiony][optionx] == 0 and field[self._y_tile][self._x_tile].moves_count == 0:
                             possible_moves.append(option_dbl)
-
-
-            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["NW"], current_pos))))
-            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
-                if field[optiony][optionx] != 0 and field[optiony][optionx].color != self.color:
-                    possible_moves.append(option)
-
-            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["NE"], current_pos))))
-            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
-                if field[optiony][optionx] != 0 and field[optiony][optionx].color != self.color:
-                    possible_moves.append(option)
-
         except IndexError:
             pass
+
+        try:
+            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["NW"], current_pos))))
+            near_option = near_optionx, near_optiony = tuple(map(sum, list(zip(self._DIRECTIONS["W"], current_pos))))
+            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                if field[optiony][optionx] != 0 and field[optiony][optionx].color != self.color:
+                    possible_moves.append(option)
+
+            if 0 <= near_optionx < len(field[0]) and 0 <= near_optiony < len(field):
+                if field[near_optiony][near_optionx] != 0 and \
+                        field[near_optiony][near_optionx].color != self.color and \
+                        field[near_optiony][near_optionx].moves_count == 1 and \
+                        near_optiony in [3, len(field) - 3] and \
+                        field[near_optiony][near_optionx].symbol == "P" and \
+                        near_option == last_move:
+                    possible_moves.append(option)
+        except IndexError:
+            pass
+
+        try:
+            option = optionx, optiony = tuple(map(sum, list(zip(self._DIRECTIONS["NE"], current_pos))))
+            near_option = near_optionx, near_optiony = tuple(map(sum, list(zip(self._DIRECTIONS["E"], current_pos))))
+
+            if 0 <= optionx < len(field[0]) and 0 <= optiony < len(field):
+                if field[optiony][optionx] != 0 and field[optiony][optionx].color != self.color:
+                    possible_moves.append(option)
+            if 0 <= near_optionx < len(field[0]) and 0 <= near_optiony < len(field):
+                if field[near_optiony][near_optionx] != 0 and \
+                        field[near_optiony][near_optionx].color != self.color and \
+                        field[near_optiony][near_optionx].moves_count == 1 and \
+                        near_optiony in [3, len(field) - 3] and \
+                        field[near_optiony][near_optionx].symbol == "P" and \
+                        near_option == last_move:
+                    possible_moves.append(option)
+        except IndexError:
+            pass
+
         return possible_moves
 
 
@@ -150,7 +204,7 @@ class Rook(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="R")
 
-    def get_possible_moves(self, field: list):
+    def get_possible_moves(self, field: list, last_move: tuple=None):
         possible_moves = []
 
         for direc in self._DIRECTIONS:
@@ -185,7 +239,7 @@ class Bishop(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="B")
 
-    def get_possible_moves(self, field: list):
+    def get_possible_moves(self, field: list, last_move: tuple=None):
         possible_moves = []
 
         for direc in self._DIRECTIONS:
@@ -220,7 +274,7 @@ class Queen(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="Q")
 
-    def get_possible_moves(self, field: list):
+    def get_possible_moves(self, field: list, last_move: tuple=None):
         possible_moves = []
 
         for direc in self._DIRECTIONS:
@@ -262,9 +316,9 @@ class Knight(Piece):
             (1, 2),
             (-2, -1),
             (-2, 1),
-                            ] # only for knight
+        ]  # only for knight
 
-    def get_possible_moves(self, field: list):
+    def get_possible_moves(self, field: list, last_move: tuple=None):
         possible_moves = []
         current_pos = self._x_tile, self._y_tile
         for direc in self._DIRECTIONS:
@@ -337,18 +391,6 @@ class ChessBoard(RectField):
                              ]
                              )
 
-        # Options to move
-        if self._possible_moves:
-            for i in self._possible_moves:
-                pygame.draw.rect(self._surface, self._active_tile_color,
-                                 [
-                                     self._x + (self._cell_size * i[0]),
-                                     self._y + (self._cell_size * i[1]),
-                                     self._cell_size,
-                                     self._cell_size
-                                 ]
-                                 )
-
         # last move
         if self._last_move_from:
             pygame.draw.rect(self._surface, (0, 170, 10),
@@ -369,24 +411,35 @@ class ChessBoard(RectField):
                              ]
                              )
 
+        # Options to move
+        if self._possible_moves:
+            for i in self._possible_moves:
+                pygame.draw.rect(self._surface, self._active_tile_color,
+                                 [
+                                     self._x + (self._cell_size * i[0]),
+                                     self._y + (self._cell_size * i[1]),
+                                     self._cell_size,
+                                     self._cell_size
+                                 ]
+                                 )
+
         # grid
-        for hor in range(len(self._field)+1):
+        for hor in range(len(self._field) + 1):
             pygame.draw.line(self._surface, (0, 0, 0),
-                             (0+self._x, hor*self._cell_size + self._y),
-                             (len(self._field[0])*self._cell_size+self._x, hor * self._cell_size + self._y), 1)
+                             (0 + self._x, hor * self._cell_size + self._y),
+                             (len(self._field[0]) * self._cell_size + self._x, hor * self._cell_size + self._y), 1)
 
-        for ver in range(len(self._field[0])+1):
+        for ver in range(len(self._field[0]) + 1):
             pygame.draw.line(self._surface, (0, 0, 0),
-                             (ver*self._cell_size + self._x, 0+self._y),
-                             (ver * self._cell_size + self._x, len(self._field)*self._cell_size+self._y), 1)
-
+                             (ver * self._cell_size + self._x, 0 + self._y),
+                             (ver * self._cell_size + self._x, len(self._field) * self._cell_size + self._y), 1)
 
     def draw_transformation_options(self, color: str, surface: pygame.Surface) -> None:
         pieces = ["Q", "N", "B", "R"]
         for j in range(len(pieces)):
             pygame.draw.rect(self._surface, (255, 0, 0),
                              [self._x + (self._cell_size * 8),
-                              self._y + (self._cell_size * (((len(self._field) - 4)/2)+j)),
+                              self._y + (self._cell_size * (((len(self._field) - 4) / 2) + j)),
                               self._cell_size, self._cell_size])
             pygame.draw.rect(self._surface, (0, 0, 0),
                              [self._x + (self._cell_size * 8),
@@ -394,11 +447,13 @@ class ChessBoard(RectField):
                               self._cell_size, self._cell_size], 1)
 
             img = pygame.image.load(f"{color}{pieces[j]}.png")
-            surface.blit(img, (self._x + (self._cell_size * 8),  self._y + (self._cell_size * (((len(self._field) - 4)/2)+j))))
+            surface.blit(img, (
+            self._x + (self._cell_size * 8), self._y + (self._cell_size * (((len(self._field) - 4) / 2) + j))))
 
     def make_field_prediction(self, destination_tile: tuple) -> list:
         x, y = self._active_tile
-        temporary_field = [[0 for __ in range(len(self._field[0]))] for _ in range(len(self._field))] # copy of the field for returning to consideration
+        temporary_field = [[0 for __ in range(len(self._field[0]))] for _ in
+                           range(len(self._field))]  # copy of the field for returning to consideration
         destx, desty = destination_tile
 
         for i, row in enumerate(self._field):
@@ -417,12 +472,25 @@ class ChessBoard(RectField):
             destx, desty = destination_tile
 
             self._field[y][x].upgrade_moves_count()
+            if self._field[y][x].symbol == "P" and destx != x and self._field[desty][destx] == 0:
+                self._field[y][destx] = 0
+            if self._field[y][x].symbol == "K" and abs(destx - x) == 2:
+                if destx - x < 0:  # 0-0-0
+                    self._field[y][x-1] = self._field[y][0]
+                    self._field[y][0] = 0
+                    self._field[y][x-1].set_new_tile((x-1, y))
+
+                if destx - x > 0:  # 0-0
+                    self._field[y][x+1] = self._field[y][7]
+                    self._field[y][7] = 0
+                    self._field[y][x + 1].set_new_tile((x+1, y))
+
             self._field[desty][destx] = self._field[y][x]
             self._field[y][x] = 0
 
             self._field[desty][destx].set_new_tile((destx, desty))
             self._last_move_from = x, y
-            print(self._last_move_from)
+            # print(self._last_move_from)
 
     def get_field(self):
         return self._field
@@ -448,4 +516,3 @@ class ChessBoard(RectField):
             for j in i:
                 if j != 0:
                     j.draw_piece(self._surface, self._cell_size, self)
-
