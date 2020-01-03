@@ -298,6 +298,8 @@ class ChessBoard(RectField):
         self._possible_moves = []
         self._surface = surface
         self._field = field
+        self._last_move_from = None
+        self._last_move_to = None
 
     def get_margin(self):
         return self._x, self._y
@@ -307,6 +309,9 @@ class ChessBoard(RectField):
 
     def set_possible_moves(self, possible_moves: list):
         self._possible_moves = possible_moves
+
+    def set_last_move(self, last_move: tuple):
+        self._last_move_to = last_move
 
     def draw_board(self):
         # black \ white tiles
@@ -321,6 +326,7 @@ class ChessBoard(RectField):
                                      [self._x + (self._cell_size * j), self._y + (self._cell_size * i),
                                       self._cell_size, self._cell_size])
 
+        # Picked piece
         if self._active_tile:
             pygame.draw.rect(self._surface, self._active_tile_color,
                              [
@@ -331,6 +337,7 @@ class ChessBoard(RectField):
                              ]
                              )
 
+        # Options to move
         if self._possible_moves:
             for i in self._possible_moves:
                 pygame.draw.rect(self._surface, self._active_tile_color,
@@ -342,16 +349,37 @@ class ChessBoard(RectField):
                                  ]
                                  )
 
+        # last move
+        if self._last_move_from:
+            pygame.draw.rect(self._surface, (0, 170, 10),
+                             [
+                                 self._x + (self._cell_size * self._last_move_to[0]),
+                                 self._y + (self._cell_size * self._last_move_to[1]),
+                                 self._cell_size,
+                                 self._cell_size
+                             ]
+                             )
+
+            pygame.draw.rect(self._surface, (0, 170, 10),
+                             [
+                                 self._x + (self._cell_size * self._last_move_from[0]),
+                                 self._y + (self._cell_size * self._last_move_from[1]),
+                                 self._cell_size,
+                                 self._cell_size
+                             ]
+                             )
+
         # grid
         for hor in range(len(self._field)+1):
             pygame.draw.line(self._surface, (0, 0, 0),
                              (0+self._x, hor*self._cell_size + self._y),
                              (len(self._field[0])*self._cell_size+self._x, hor * self._cell_size + self._y), 1)
 
-        for ver in range(len(self._field)+1):
+        for ver in range(len(self._field[0])+1):
             pygame.draw.line(self._surface, (0, 0, 0),
                              (ver*self._cell_size + self._x, 0+self._y),
                              (ver * self._cell_size + self._x, len(self._field)*self._cell_size+self._y), 1)
+
 
     def draw_transformation_options(self, color: str, surface: pygame.Surface) -> None:
         pieces = ["Q", "N", "B", "R"]
@@ -393,6 +421,8 @@ class ChessBoard(RectField):
             self._field[y][x] = 0
 
             self._field[desty][destx].set_new_tile((destx, desty))
+            self._last_move_from = x, y
+            print(self._last_move_from)
 
     def get_field(self):
         return self._field

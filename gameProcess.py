@@ -11,6 +11,7 @@ class GameProcess(object):
         self.__active_tile = None
         self._possible_moves = []
         self.__turn = "w"
+        self.__last_move = None
         self.__chess_board = ChessBoard(x=50,
                                         y=50,
                                         cell_size=self.__cell_size,
@@ -24,6 +25,10 @@ class GameProcess(object):
     def set_possible_moves(self, possible_moves: list):
         self._possible_moves = possible_moves
         self.__chess_board.set_possible_moves(possible_moves)
+
+    def set_last_move(self, last_move):
+        self.__last_move = last_move
+        self.__chess_board.set_last_move(last_move)
 
     def is_check(self, field: list):  # fix for king
         """True if given field checks the current player's King"""
@@ -106,11 +111,14 @@ class GameProcess(object):
                                 self.__turn = f"{self.__turn}T"
                                 print(self.__turn)
                                 self.__chess_board.make_move((x, y))
+                                self.set_last_move((x, y))
                                 self.__field = self.__chess_board.get_field()
                                 self.set_active_tile((x, y))
 
                             if len(self.__turn) == 1:
                                 self.__chess_board.make_move((x, y))
+                                self.set_last_move((x, y))
+
                                 if self.__turn == "b":
                                     self.__turn = "w"
                                 else:
