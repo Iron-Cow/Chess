@@ -94,7 +94,7 @@ class King(Piece):  # ############# add castle
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="K")
 
-    def get_possible_moves(self, field: list, last_move: tuple=None):
+    def get_possible_moves(self, field: list, last_move: tuple = None):
         possible_moves = []
         current_pos = self._x_tile, self._y_tile
         for direc in self._DIRECTIONS.values():
@@ -126,7 +126,7 @@ class King(Piece):  # ############# add castle
             # 0-0 castle
             if field[self._y_tile][7] != 0 and field[self._y_tile][7].moves_count == 0:
                 empty = True
-                for i in range(self._x_tile+1, 7):
+                for i in range(self._x_tile + 1, 7):
                     if field[self._y_tile][i] != 0:
                         empty = False
                         break
@@ -143,7 +143,7 @@ class Pawn(Piece):  # ############# add weird capture and transformation
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="P")
 
-    def get_possible_moves(self, field: list, last_move: tuple=None):
+    def get_possible_moves(self, field: list, last_move: tuple = None):
         possible_moves = []
         current_pos = self._x_tile, self._y_tile
 
@@ -204,7 +204,7 @@ class Rook(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="R")
 
-    def get_possible_moves(self, field: list, last_move: tuple=None):
+    def get_possible_moves(self, field: list, last_move: tuple = None):
         possible_moves = []
 
         for direc in self._DIRECTIONS:
@@ -239,7 +239,7 @@ class Bishop(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="B")
 
-    def get_possible_moves(self, field: list, last_move: tuple=None):
+    def get_possible_moves(self, field: list, last_move: tuple = None):
         possible_moves = []
 
         for direc in self._DIRECTIONS:
@@ -274,7 +274,7 @@ class Queen(Piece):
     def __init__(self, x_tile: int, y_tile: int, color: str):
         super().__init__(x_tile, y_tile, color, symbol="Q")
 
-    def get_possible_moves(self, field: list, last_move: tuple=None):
+    def get_possible_moves(self, field: list, last_move: tuple = None):
         possible_moves = []
 
         for direc in self._DIRECTIONS:
@@ -318,7 +318,7 @@ class Knight(Piece):
             (-2, 1),
         ]  # only for knight
 
-    def get_possible_moves(self, field: list, last_move: tuple=None):
+    def get_possible_moves(self, field: list, last_move: tuple = None):
         possible_moves = []
         current_pos = self._x_tile, self._y_tile
         for direc in self._DIRECTIONS:
@@ -354,9 +354,13 @@ class ChessBoard(RectField):
         self._field = field
         self._last_move_from = None
         self._last_move_to = None
+        self._is_check = False
 
     def get_margin(self):
         return self._x, self._y
+
+    def set_is_check(self, king_in_danger: tuple or False):
+        self._is_check = king_in_danger
 
     def set_active_tile(self, active_tile: tuple or None):
         self._active_tile = active_tile
@@ -379,6 +383,17 @@ class ChessBoard(RectField):
                     pygame.draw.rect(self._surface, self._black_tile_color,
                                      [self._x + (self._cell_size * j), self._y + (self._cell_size * i),
                                       self._cell_size, self._cell_size])
+
+        # checked King
+        if self._is_check:
+            font = pygame.font.Font("freesansbold.ttf", 32)
+            check = font.render(f"Check", True, (255, 0, 0))
+            self._surface.blit(check, (self._x + self._cell_size * 9, self._y + self._cell_size * 0))
+
+            pygame.draw.rect(self._surface, (230, 20, 10),
+                             [self._x + (self._cell_size * self._is_check[0] ), self._y +
+                              (self._cell_size * self._is_check[1]),
+                              self._cell_size, self._cell_size])
 
         # Picked piece
         if self._active_tile:
@@ -448,7 +463,7 @@ class ChessBoard(RectField):
 
             img = pygame.image.load(f"{color}{pieces[j]}.png")
             surface.blit(img, (
-            self._x + (self._cell_size * 8), self._y + (self._cell_size * (((len(self._field) - 4) / 2) + j))))
+                self._x + (self._cell_size * 8), self._y + (self._cell_size * (((len(self._field) - 4) / 2) + j))))
 
     def make_field_prediction(self, destination_tile: tuple) -> list:
         x, y = self._active_tile
@@ -476,14 +491,14 @@ class ChessBoard(RectField):
                 self._field[y][destx] = 0
             if self._field[y][x].symbol == "K" and abs(destx - x) == 2:
                 if destx - x < 0:  # 0-0-0
-                    self._field[y][x-1] = self._field[y][0]
+                    self._field[y][x - 1] = self._field[y][0]
                     self._field[y][0] = 0
-                    self._field[y][x-1].set_new_tile((x-1, y))
+                    self._field[y][x - 1].set_new_tile((x - 1, y))
 
                 if destx - x > 0:  # 0-0
-                    self._field[y][x+1] = self._field[y][7]
+                    self._field[y][x + 1] = self._field[y][7]
                     self._field[y][7] = 0
-                    self._field[y][x + 1].set_new_tile((x+1, y))
+                    self._field[y][x + 1].set_new_tile((x + 1, y))
 
             self._field[desty][destx] = self._field[y][x]
             self._field[y][x] = 0
@@ -491,6 +506,7 @@ class ChessBoard(RectField):
             self._field[desty][destx].set_new_tile((destx, desty))
             self._last_move_from = x, y
             # print(self._last_move_from)
+            self._is_check = False
 
     def get_field(self):
         return self._field

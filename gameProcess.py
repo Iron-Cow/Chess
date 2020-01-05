@@ -12,6 +12,7 @@ class GameProcess(object):
         self._possible_moves = []
         self.__turn = "w"
         self.__last_move = None
+        self.__is_check = False
         self.__chess_board = ChessBoard(x=50,
                                         y=50,
                                         cell_size=self.__cell_size,
@@ -46,6 +47,7 @@ class GameProcess(object):
                     enemy_hits += el.get_possible_moves(field_option)
         return sorted(list(set(enemy_hits)))  # sort for debug only
 
+
     def is_check(self, field: list):  # fix for king
         """True if given field checks the current player's King"""
         return self.find_my_king(field) in self.all_enemy_hits(field)
@@ -63,16 +65,21 @@ class GameProcess(object):
                     if x == 8:
                         pieces = [Queen, Knight, Bishop, Rook]
                         for i in range(4):
-                            if y == 2+i:
+                            if y == 2 + i:
                                 self.__chess_board.add_piece(pieces[i](self.__active_tile[0],
-                                                                  self.__active_tile[1],
-                                                                  self.__turn[0]))
+                                                                       self.__active_tile[1],
+                                                                       self.__turn[0]))
                                 if self.__turn[0] == "b":
                                     self.__turn = "w"
                                 else:
                                     self.__turn = "b"
                                 self.set_active_tile(None)
                                 self.__field = self.__chess_board.get_field()
+                                self.__is_check = False
+
+                                if self.is_check(self.__field):
+                                    self.__is_check = True
+                                    self.__chess_board.set_is_check(self.find_my_king(self.__field))
 
                                 break
 
@@ -97,12 +104,12 @@ class GameProcess(object):
                                         safe = True
                                         if move[0] - x < 0:  # 0-0-0
                                             for i in range(2):
-                                                if (x-i, y) in enemy_hits:
+                                                if (x - i, y) in enemy_hits:
                                                     safe = False
                                                     break
                                         elif move[0] - x > 0:  # 0-0-0
                                             for i in range(2):
-                                                if (x+i, y) in enemy_hits:
+                                                if (x + i, y) in enemy_hits:
                                                     safe = False
                                                     break
                                         if not safe:
@@ -118,10 +125,11 @@ class GameProcess(object):
                         if (x, y) == self.__active_tile:  # remove activation
                             self.set_active_tile(None)
                             self.set_possible_moves([])
+
                         elif (x, y) in self._possible_moves:  # make a move
 
                             # PAWN TRANSFORMATION BLOCK
-                            if (y == 0 or y == len(self.__field)-1) and \
+                            if (y == 0 or y == len(self.__field) - 1) and \
                                     self.__field[self.__active_tile[1]][self.__active_tile[0]].symbol == "P":
                                 # print("TRANSFORMATION!!!!", x, y)
                                 self.__turn = f"{self.__turn}T"
@@ -141,6 +149,11 @@ class GameProcess(object):
                                     self.__turn = "b"
                                 self.set_active_tile(None)
                                 self.__field = self.__chess_board.get_field()
+                                self.__is_check = False
+
+                                if self.is_check(self.__field):
+                                    self.__is_check = True
+                                    self.__chess_board.set_is_check(self.find_my_king(self.__field))
 
                             self.set_possible_moves([])
                             # print(self.__field[y][x], x, y, "DEACTIVADED")
@@ -180,6 +193,11 @@ class GameProcess(object):
             if len(self.__turn) > 1:
                 self.__chess_board.draw_transformation_options(self.__turn[0], self.__window)
             self.__chess_board.draw_all_pieces()
+            # if self._is_check:
+            #     print("check")
+            #     pass
+            #     # self.__is_check = True
+            #     # self.__chess_board.set_is_check(self.find_my_king(self.__field))
             self.__field = self.__chess_board.get_field()
             self.event_checker()
 
