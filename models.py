@@ -386,14 +386,20 @@ class ChessBoard(RectField):
 
         # checked King
         if self._is_check:
+            if self._is_check == "Mate":
+                text = "CheckMate!"
+            else:
+                text = "Check!"
+                pygame.draw.rect(self._surface, (230, 20, 10),
+                                 [self._x + (self._cell_size * self._is_check[0]), self._y +
+                                  (self._cell_size * self._is_check[1]),
+                                  self._cell_size, self._cell_size])
+
             font = pygame.font.Font("freesansbold.ttf", 32)
-            check = font.render(f"Check", True, (255, 0, 0))
+            check = font.render(f"{text}", True, (255, 0, 0))
             self._surface.blit(check, (self._x + self._cell_size * 9, self._y + self._cell_size * 0))
 
-            pygame.draw.rect(self._surface, (230, 20, 10),
-                             [self._x + (self._cell_size * self._is_check[0] ), self._y +
-                              (self._cell_size * self._is_check[1]),
-                              self._cell_size, self._cell_size])
+
 
         # Picked piece
         if self._active_tile:
@@ -465,8 +471,8 @@ class ChessBoard(RectField):
             surface.blit(img, (
                 self._x + (self._cell_size * 8), self._y + (self._cell_size * (((len(self._field) - 4) / 2) + j))))
 
-    def make_field_prediction(self, destination_tile: tuple) -> list:
-        x, y = self._active_tile
+    def make_field_prediction(self, destination_tile: tuple, tile_to_try) -> list:
+        x, y = tile_to_try
         temporary_field = [[0 for __ in range(len(self._field[0]))] for _ in
                            range(len(self._field))]  # copy of the field for returning to consideration
         destx, desty = destination_tile

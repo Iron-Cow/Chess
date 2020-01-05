@@ -95,7 +95,7 @@ class GameProcess(object):
                             for move in possible_moves:
                                 x, y = self.__active_tile
 
-                                field_to_check = self.__chess_board.make_field_prediction(move)
+                                field_to_check = self.__chess_board.make_field_prediction(move, (x, y))
                                 if not self.is_check(field_to_check):
 
                                     # castle rules
@@ -161,6 +161,23 @@ class GameProcess(object):
                     # print(f"out_of_board! {x, y}")
                     pass
 
+    def game_over(self):
+        """call when check to current color appears.
+        :returns True if no possible moves left (Check-Mate) else False"""
+        for y, row in enumerate(self.__field):
+            for x, el in enumerate(row):
+                if self.__field[y][x] != 0 and self.__field[y][x].color == self.__turn:
+
+                    possible_moves = self.__field[y][x].get_possible_moves(self.__field, self.__last_move)
+
+            #     # Check if my move will not cause the check
+                    for move in possible_moves:
+                        field_to_check = self.__chess_board.make_field_prediction(move, (x, y))
+                        if not self.is_check(field_to_check):
+                            # no castle possible
+                            return False
+        return True
+    #
     def chess_board_fill(self):
         self.__chess_board.add_piece(Rook(7, 0, "b"))
         self.__chess_board.add_piece(Knight(6, 0, "b"))
@@ -193,11 +210,9 @@ class GameProcess(object):
             if len(self.__turn) > 1:
                 self.__chess_board.draw_transformation_options(self.__turn[0], self.__window)
             self.__chess_board.draw_all_pieces()
-            # if self._is_check:
-            #     print("check")
-            #     pass
-            #     # self.__is_check = True
-            #     # self.__chess_board.set_is_check(self.find_my_king(self.__field))
+            if self.__is_check:
+                if self.game_over():
+                    self.__chess_board.set_is_check("Mate")
             self.__field = self.__chess_board.get_field()
             self.event_checker()
 
