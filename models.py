@@ -399,8 +399,6 @@ class ChessBoard(RectField):
             check = font.render(f"{text}", True, (255, 0, 0))
             self._surface.blit(check, (self._x + self._cell_size * 9, self._y + self._cell_size * 0))
 
-
-
         # Picked piece
         if self._active_tile:
             pygame.draw.rect(self._surface, self._active_tile_color,
